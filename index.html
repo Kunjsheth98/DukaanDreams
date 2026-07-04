@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Dukaan Dreams 🪔</title>
+<link rel="icon" href="assets/ui/diya.png" />
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app">
+
+  <header id="hud">
+    <div class="brand">
+      <img src="assets/ui/diya.png" alt="" class="brand-logo" />
+      <span class="brand-title">Dukaan Dreams</span>
+    </div>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-screen="city">🛍️ Play</button>
+      <button class="tab-btn" data-screen="worldmap">🗺️ World Map</button>
+      <button class="tab-btn" data-screen="achievements">🏆 Achievements</button>
+      <button class="tab-btn" data-screen="stats">📊 Stats</button>
+    </nav>
+
+    <div class="hud-stats">
+      <div class="hud-chip" title="Money"><img src="assets/ui/coin.png" class="hud-icon" alt="" /><span id="hud-money">₹0</span></div>
+      <div class="hud-chip" title="Reputation"><img src="assets/ui/star.png" class="hud-icon" alt="" /><span id="hud-rep">0</span></div>
+      <div class="hud-chip hud-city" title="City &amp; Day">
+        <span id="hud-city-name">—</span>
+        <span id="hud-day">Day 1 / 10</span>
+      </div>
+      <div class="hud-chip hud-target-chip" title="City cumulative target">
+        <div class="hud-target-track"><div id="hud-target-fill" class="hud-target-fill"></div></div>
+        <span id="hud-target-label">₹0 / ₹0</span>
+      </div>
+      <div class="hud-chip" title="Happiness"><span id="hud-happy" class="hud-happy">100%</span></div>
+      <div class="hud-chip" title="Time left in day">⏱ <span id="hud-timer">—</span></div>
+    </div>
+
+    <div class="hud-controls">
+      <button id="pause-btn" class="btn btn-ghost">⏸ Pause</button>
+      <button id="ff-btn" class="btn btn-ghost">1x</button>
+      <button id="fullscreen-btn" class="btn btn-ghost" title="Fullscreen">⛶</button>
+      <button id="sound-btn" class="btn btn-ghost" title="Mute/Unmute">🔊</button>
+      <button id="note-btn" class="btn btn-ghost" title="A little note">💌</button>
+    </div>
+  </header>
+
+  <main id="screens">
+
+    <section id="screen-city" class="screen">
+      <aside class="build-panel">
+        <h3>Shops <span class="muted">(tap an empty plot to build)</span></h3>
+        <div id="shop-ref-list" class="ref-list"></div>
+        <h3>Street Furniture</h3>
+        <div id="deco-ref-list" class="ref-list"></div>
+      </aside>
+      <div class="stage">
+        <div class="stage-scroll">
+          <div id="street-scene" class="street-scene"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-worldmap" class="screen hidden">
+      <h2 class="screen-title">World Map</h2>
+      <p class="muted">Unlock new cities by growing your reputation across India.</p>
+      <div id="world-map-grid" class="world-map-grid"></div>
+    </section>
+
+    <section id="screen-achievements" class="screen hidden">
+      <h2 class="screen-title">Achievements</h2>
+      <div id="achievements-grid" class="achievements-grid"></div>
+    </section>
+
+    <section id="screen-stats" class="screen hidden">
+      <h2 class="screen-title">Lifetime Stats</h2>
+      <div id="stats-grid" class="stats-grid"></div>
+      <div class="danger-zone">
+        <h3>Reset Progress</h3>
+        <p class="muted">Wipes all money, shops, reputation, cities and achievements and starts over from Mumbai, Day 1. This cannot be undone.</p>
+        <button id="reset-game-btn" class="btn btn-danger">🗑 Reset Game</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="modal-root" class="modal-root"></div>
+  <div id="toast-root" class="toast-root"></div>
+
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/state.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/customer.js"></script>
+<script src="js/render.js"></script>
+<script src="js/building.js"></script>
+<script src="js/achievements.js"></script>
+<script src="js/daycycle.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
