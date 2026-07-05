@@ -131,6 +131,7 @@ DD.refreshShopPlot = function (index) {
   const si = DD.runtime.shopInstances[index];
   div.innerHTML = '';
   if (!si) {
+    div.dataset.shopKey = '';
     div.classList.add('empty');
     div.classList.remove('occupied-lock');
     div.innerHTML =
@@ -146,6 +147,7 @@ DD.refreshShopPlot = function (index) {
   const tier = def.tiers[si.tier];
   const occupied = si.occupants.length > 0;
   div.classList.toggle('occupied-lock', occupied);
+  div.dataset.shopKey = si.typeId + '|' + si.tier;
 
   const stars = '★'.repeat(si.tier + 1);
   const card = document.createElement('div');
@@ -154,9 +156,9 @@ DD.refreshShopPlot = function (index) {
     '<div class="ground-shadow"></div>' +
     '<img src="' + tier.img + '" alt="' + def.name + '" class="shop-img" />' +
     '<div class="tier-badge" title="Tier ' + (si.tier + 1) + '">' + stars + '</div>' +
-    (occupied ? '<div class="lock-badge" title="Occupied — cannot upgrade or sell">🔒</div>' : '') +
-    (si.streak >= 3 ? '<div class="streak-badge">🔥</div>' : '') +
-    (si.queue.length ? '<div class="queue-badge">⏳ ' + si.queue.length + '</div>' : '') +
+    '<div class="lock-badge" style="display:' + (occupied ? '' : 'none') + '" title="Occupied — cannot upgrade or sell">🔒</div>' +
+    '<div class="streak-badge" style="display:' + (si.streak >= 3 ? '' : 'none') + '">🔥</div>' +
+    '<div class="queue-badge" style="display:' + (si.queue.length ? '' : 'none') + '">⏳ <span class="queue-count">' + si.queue.length + '</span></div>' +
     '<div class="info-row">' +
     '<div class="name-pill">' + def.name + '</div>' +
     '<div class="cap-bar-mini"><div class="cap-fill" style="width:' + (si.occupants.length / tier.cap * 100) + '%"></div></div>' +
@@ -165,12 +167,51 @@ DD.refreshShopPlot = function (index) {
   div.appendChild(card);
 };
 
+/**
+ * Lightweight update for occupancy/queue/streak changes — called very
+ * frequently (every customer entry/exit/queue event). Patches only the
+ * small dynamic bits instead of tearing down and rebuilding the whole
+ * plot (which was forcing the browser to re-decode the shop image and
+ * re-run its drop-shadow filter on every single customer, causing real
+ * frame stutters once several shops were busy at once).
+ */
+DD.updateShopOccupancyVisual = function (index) {
+  const div = DD.el.shopsLayer.querySelector('.shop-plot[data-index="' + index + '"]');
+  const si = DD.runtime.shopInstances[index];
+  if (!div || !si) return;
+  const currentKey = si.typeId + '|' + si.tier;
+  if (div.dataset.shopKey !== currentKey || !div.querySelector('.plot-content')) {
+    DD.refreshShopPlot(index); // shop type/tier changed since last paint — needs a real rebuild
+    return;
+  }
+  const def = DD.shopById(si.typeId);
+  const tier = def.tiers[si.tier];
+  const occupied = si.occupants.length > 0;
+  div.classList.toggle('occupied-lock', occupied);
+
+  const lockBadge = div.querySelector('.lock-badge');
+  if (lockBadge) lockBadge.style.display = occupied ? '' : 'none';
+  const streakBadge = div.querySelector('.streak-badge');
+  if (streakBadge) streakBadge.style.display = si.streak >= 3 ? '' : 'none';
+  const queueBadge = div.querySelector('.queue-badge');
+  if (queueBadge) {
+    queueBadge.style.display = si.queue.length ? '' : 'none';
+    const countEl = queueBadge.querySelector('.queue-count');
+    if (countEl) countEl.textContent = si.queue.length;
+  }
+  const capFill = div.querySelector('.cap-fill');
+  if (capFill) capFill.style.width = (si.occupants.length / tier.cap * 100) + '%';
+  const capText = div.querySelector('.cap-text-mini');
+  if (capText) capText.textContent = si.occupants.length + '/' + tier.cap;
+};
+
 DD.refreshDecoPlot = function (index) {
   const div = DD.el.footpathLayer.querySelector('.deco-plot[data-index="' + index + '"]');
   if (!div) return;
   const di = DD.runtime.decoInstances[index];
   div.innerHTML = '';
   if (!di) {
+    div.dataset.decoKey = '';
     div.classList.add('empty');
     div.innerHTML = '<div class="deco-empty">+</div>';
     return;
@@ -178,20 +219,50 @@ DD.refreshDecoPlot = function (index) {
   div.classList.remove('empty');
   const def = DD.furnitureById(di.typeId);
   const occupied = di.occupants.length > 0;
+  div.dataset.decoKey = di.typeId;
   const card = document.createElement('div');
   card.className = 'plot-content deco-content';
   let capHtml = '';
   if (def.kind === 'seat') {
     capHtml = '<div class="cap-bar-mini small"><div class="cap-fill" style="width:' + (di.occupants.length / def.cap * 100) + '%"></div></div>' +
       '<div class="cap-text-mini small">' + di.occupants.length + '/' + def.cap + '</div>' +
-      (di.queue.length ? '<div class="queue-badge small">⏳ ' + di.queue.length + '</div>' : '');
+      '<div class="queue-badge small" style="display:' + (di.queue.length ? '' : 'none') + '">⏳ <span class="queue-count">' + di.queue.length + '</span></div>';
   }
   card.innerHTML =
     '<div class="ground-shadow small"></div>' +
     '<img src="' + def.icon + '" alt="' + def.name + '" class="deco-img" />' +
-    (occupied && def.kind === 'seat' ? '<div class="lock-badge small" title="In use">🔒</div>' : '') +
+    '<div class="lock-badge small" style="display:' + (occupied && def.kind === 'seat' ? '' : 'none') + '" title="In use">🔒</div>' +
     '<div class="info-row"><div class="name-pill small">' + def.name + '</div>' + capHtml + '</div>';
   div.appendChild(card);
+};
+
+/**
+ * Lightweight update for furniture occupancy/queue changes — avoids
+ * rebuilding the whole plot (and re-decoding the icon image) every time
+ * a customer sits down or leaves a bench.
+ */
+DD.updateDecoOccupancyVisual = function (index) {
+  const div = DD.el.footpathLayer.querySelector('.deco-plot[data-index="' + index + '"]');
+  const di = DD.runtime.decoInstances[index];
+  if (!div || !di) return;
+  if (div.dataset.decoKey !== di.typeId || !div.querySelector('.plot-content')) {
+    DD.refreshDecoPlot(index);
+    return;
+  }
+  const def = DD.furnitureById(di.typeId);
+  const occupied = di.occupants.length > 0;
+  const lockBadge = div.querySelector('.lock-badge');
+  if (lockBadge) lockBadge.style.display = (occupied && def.kind === 'seat') ? '' : 'none';
+  const capFill = div.querySelector('.cap-fill');
+  if (capFill && def.kind === 'seat') capFill.style.width = (di.occupants.length / def.cap * 100) + '%';
+  const capText = div.querySelector('.cap-text-mini');
+  if (capText && def.kind === 'seat') capText.textContent = di.occupants.length + '/' + def.cap;
+  const queueBadge = div.querySelector('.queue-badge');
+  if (queueBadge) {
+    queueBadge.style.display = di.queue.length ? '' : 'none';
+    const countEl = queueBadge.querySelector('.queue-count');
+    if (countEl) countEl.textContent = di.queue.length;
+  }
 };
 
 // ---------------------------------------------------------------
@@ -229,15 +300,40 @@ DD.spawnBusEl = function () {
 // ---------------------------------------------------------------
 DD.customerEls = {};
 
+DD.RIGGED_SPRITES = { 1: { hipFraction: 0.656 } }; // trial: customer-1 uses a 3-piece walk rig
+
 DD.createCustomerEl = function (cust) {
   const div = document.createElement('div');
-  div.className = 'customer' + (cust.isVIP ? ' vip' : '');
+  const rig = DD.RIGGED_SPRITES[cust.spriteIndex];
+  div.className = 'customer' + (cust.isVIP ? ' vip' : '') + (rig ? ' rigged' : '');
   div.dataset.id = cust.id;
+
+  let spriteHtml;
+  if (rig) {
+    const base = 'assets/customers_rig/customer-' + cust.spriteIndex;
+    spriteHtml =
+      '<div class="rig-stage" style="--hip-y:' + (rig.hipFraction * 100) + '%">' +
+      '<img class="rig-part rig-legL" src="' + base + '-legL.png" alt="" />' +
+      '<img class="rig-part rig-legR" src="' + base + '-legR.png" alt="" />' +
+      '<img class="rig-part rig-torso" src="' + base + '-torso.png" alt="" />' +
+      '</div>';
+  } else {
+    spriteHtml = '<img class="cust-img" src="assets/customers/customer-' + cust.spriteIndex + '.png" alt="customer" />';
+  }
+
   div.innerHTML =
     '<div class="patience-wrap"><div class="patience-fill"></div></div>' +
     (cust.isVIP ? '<div class="vip-badge">VIP</div>' : '') +
-    '<img class="cust-img" src="assets/customers/customer-' + cust.spriteIndex + '.png" alt="customer" />' +
+    '<div class="sprite-wrap">' + spriteHtml + '</div>' +
     '<div class="bought-bubble"></div>';
+
+  const bobDuration = (54 / cust.speed).toFixed(2); // faster walkers move faster
+  div.style.setProperty('--foot-duration', bobDuration + 's');
+  if (!rig) {
+    div.querySelector('.cust-img').style.animationDuration = bobDuration + 's';
+  } else {
+    div.querySelectorAll('.rig-part').forEach(el => { el.style.animationDuration = bobDuration + 's'; });
+  }
   DD.el.walkLayer.appendChild(div);
   DD.customerEls[cust.id] = div;
   return div;

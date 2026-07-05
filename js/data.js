@@ -88,27 +88,27 @@ DD.FURNITURE_TYPES = [
 DD.furnitureById = id => DD.FURNITURE_TYPES.find(f => f.id === id);
 
 DD.CITIES = [
-  { id: 'mumbai',  name: 'Mumbai — Chowpatty Lane',   unlockRep: 0,    plots: 7,  days: 10, target: 500,
+  { id: 'mumbai',  name: 'Mumbai — Chowpatty Lane',   unlockRep: 0,    plots: 7,  days: 10, target: 750,
     shops: ['chai', 'vadapav', 'chaat', 'kulfi'], moneyMin: 40, moneyMax: 90,
     skyline: 'assets/skylines/mumbai.jpg' },
-  { id: 'delhi',   name: 'Delhi — Chandni Chowk',     unlockRep: 600,  plots: 8,  days: 13, target: 1400,
+  { id: 'delhi',   name: 'Delhi — Chandni Chowk',     unlockRep: 600,  plots: 8,  days: 13, target: 2000,
     shops: ['saree', 'jewel', 'mithai', 'spice', 'chai'], moneyMin: 56, moneyMax: 124,
     skyline: 'assets/skylines/delhi.jpg' },
-  { id: 'jaipur',  name: 'Jaipur — Johari Bazaar',    unlockRep: 1500, plots: 8,  days: 16, target: 2300,
+  { id: 'jaipur',  name: 'Jaipur — Johari Bazaar',    unlockRep: 1500, plots: 8,  days: 16, target: 3400,
     shops: ['jewel', 'handicraft', 'saree', 'chai'], moneyMin: 72, moneyMax: 158,
     skyline: 'assets/skylines/jaipur.jpg' },
-  { id: 'kolkata', name: 'Kolkata — College Street',  unlockRep: 2800, plots: 8,  days: 19, target: 3200,
+  { id: 'kolkata', name: 'Kolkata — College Street',  unlockRep: 2800, plots: 8,  days: 19, target: 4800,
     shops: ['book', 'mithai', 'chai', 'chaat'], moneyMin: 88, moneyMax: 192,
     skyline: 'assets/skylines/kolkata.jpg' },
-  { id: 'kochi',   name: 'Kochi — Spice Market',      unlockRep: 4500, plots: 9,  days: 23, target: 4100,
+  { id: 'kochi',   name: 'Kochi — Spice Market',      unlockRep: 4500, plots: 9,  days: 23, target: 6200,
     shops: ['spice', 'handicraft', 'kulfi', 'vadapav'], moneyMin: 104, moneyMax: 226,
     skyline: 'assets/skylines/kochi.jpg' },
-  { id: 'goa',     name: 'Goa — Night Market',        unlockRep: 7000, plots: 10, days: 28, target: 5000,
+  { id: 'goa',     name: 'Goa — Night Market',        unlockRep: 7000, plots: 10, days: 28, target: 7800,
     shops: ['chai', 'vadapav', 'chaat', 'kulfi', 'mithai', 'saree', 'jewel', 'spice', 'handicraft', 'book'],
     moneyMin: 120, moneyMax: 260, skyline: 'assets/skylines/goa.jpg' }
 ];
 
-DD.BASE_SPAWN_MS = 5000;
+DD.BASE_SPAWN_MS = 3500;
 DD.DAY_SECONDS = 45;
 DD.BUS_INTERVAL_S = 13;
 DD.PLOT_WIDTH = 172;

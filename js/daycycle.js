@@ -40,6 +40,16 @@ DD.travelToCity = function (index) {
   DD.showScreen('city');
 };
 
+DD.preloadCityAssets = function () {
+  const cityDef = DD.currentCityDef();
+  cityDef.shops.forEach(shopId => {
+    const def = DD.shopById(shopId);
+    def.tiers.forEach(tier => { const img = new Image(); img.src = tier.img; });
+  });
+  DD.FURNITURE_TYPES.forEach(def => { const img = new Image(); img.src = def.icon; });
+  for (let i = 1; i <= DD.CUSTOMER_SPRITE_COUNT; i++) { const img = new Image(); img.src = 'assets/customers/customer-' + i + '.png'; }
+};
+
 DD.enterCityScreen = function () {
   const cityDef = DD.currentCityDef();
   const citySave = DD.currentCitySave();
@@ -54,6 +64,7 @@ DD.enterCityScreen = function () {
   DD.buildStreetScene();
   DD.renderBuildPanel();
   DD.renderHUD();
+  DD.preloadCityAssets();
   DD.maybeShowTutorialThenGate();
 };
 
@@ -179,12 +190,11 @@ DD.customerCallbacks = {
     DD.state.stats.customersServed += 1;
     DD.runtime.earningsToday += price;
     si.streak = (si.streak || 0) + 1;
-    if (si.streak >= 3) DD.refreshShopPlot(cust.targetPlotIndex);
     if (cust.isVIP) { DD.state.stats.vipServed++; DD.unlockAchievement('vip_served'); DD.Sound.play('vip'); }
     else DD.Sound.play('coin');
     if (cust.fromBus) DD.state.stats.busCustomersServed++;
     DD.checkMoneyAchievements();
-    DD.refreshShopPlot(cust.targetPlotIndex);
+    DD.updateShopOccupancyVisual(cust.targetPlotIndex);
     DD.renderHUD();
   },
   onFurnitureCharge: function (cust, def, di, amount) {
@@ -193,7 +203,7 @@ DD.customerCallbacks = {
     DD.runtime.earningsToday += amount;
     DD.Sound.play('coin');
     DD.checkMoneyAchievements();
-    DD.refreshDecoPlot(cust.targetPlotIndex);
+    DD.updateDecoOccupancyVisual(cust.targetPlotIndex);
     DD.renderHUD();
   },
   onPassInteraction: function (cust, def, di) {
@@ -221,7 +231,7 @@ function resolveCustomer(cust) {
 
 DD.resetStreakIfAbandoned = function (plotIndex) {
   const si = DD.runtime.shopInstances[plotIndex];
-  if (si) { si.streak = 0; DD.refreshShopPlot(plotIndex); }
+  if (si) { si.streak = 0; DD.updateShopOccupancyVisual(plotIndex); }
 };
 
 // ---------------------------------------------------------------
@@ -313,6 +323,10 @@ DD.endDay = function () {
   const justCompleted = !citySave.completed && citySave.cumulative >= cityDef.target;
   if (justCompleted) citySave.completed = true;
 
+  const wasFinalScheduledDay = citySave.day === cityDef.days;
+  const showDayLimitNotice = wasFinalScheduledDay && !citySave.dayLimitNotified;
+  if (showDayLimitNotice) citySave.dayLimitNotified = true;
+
   // festival day countdown
   DD.state.festivals.forEach(f => {
     if (f.active) {
@@ -334,7 +348,7 @@ DD.endDay = function () {
   DD.saveState();
 
   DD.Sound.play('dayend');
-  DD.showDayEndModal({ totalSpawned, happyPct, isPerfect, bonus, repGain, earningsToday: rt.earningsToday, justCompleted, cityDef, citySave });
+  DD.showDayEndModal({ totalSpawned, happyPct, isPerfect, bonus, repGain, earningsToday: rt.earningsToday, justCompleted, showDayLimitNotice, cityDef, citySave });
   DD.renderHUD();
 };
 
@@ -348,6 +362,15 @@ DD.showDayEndModal = function (r) {
   body += '</div>';
   if (r.isPerfect) body += '<div class="perfect-banner">🌟 Perfect Day! Bonus ' + DD.fmtMoney(r.bonus) + ' awarded.</div>';
   if (r.justCompleted) body += '<div class="perfect-banner">🏁 City target reached! ' + r.cityDef.name + ' complete — keep playing or explore the World Map.</div>';
+  if (r.showDayLimitNotice) {
+    const hit = r.citySave.cumulative >= r.cityDef.target;
+    body += '<div class="daylimit-banner ' + (hit ? 'hit' : 'miss') + '">' +
+      '<strong>' + (hit ? '✅ Target achieved within ' + r.cityDef.days + ' days!' : '⏳ Day ' + r.cityDef.days + ' used up — target not reached yet.') + '</strong>' +
+      '<p>' + (hit
+        ? 'Great run! You can keep playing extra days here to build up more before moving on, or head to the World Map.'
+        : 'No penalty — you can keep playing as many extra days as you need (Day ' + (r.cityDef.days + 1) + ', ' + (r.cityDef.days + 2) + '...) until you reach ' + DD.fmtMoney(r.cityDef.target) + '.') +
+      '</p></div>';
+  }
   body += '<p class="muted">City progress: ' + DD.fmtMoney(r.citySave.cumulative) + ' / ' + DD.fmtMoney(r.cityDef.target) + '</p>';
   body += '<div class="modal-actions"><button class="btn btn-primary btn-large" id="next-day-btn">Continue to Day ' + r.citySave.day + '</button></div>';
 

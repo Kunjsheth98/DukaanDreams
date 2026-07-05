@@ -74,8 +74,8 @@ function currentPriceMultiplier(shopTypeId) {
   return mult;
 }
 
-function refreshShop(idx) { if (DD.refreshShopPlot) DD.refreshShopPlot(idx); }
-function refreshDeco(idx) { if (DD.refreshDecoPlot) DD.refreshDecoPlot(idx); }
+function refreshShop(idx) { if (DD.updateShopOccupancyVisual) DD.updateShopOccupancyVisual(idx); }
+function refreshDeco(idx) { if (DD.updateDecoOccupancyVisual) DD.updateDecoOccupancyVisual(idx); }
 
 function releaseFromAllQueuesAndSlots(cust) {
   const rt = DD.runtime;

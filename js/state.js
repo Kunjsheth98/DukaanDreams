@@ -22,7 +22,8 @@ DD.defaultState = function () {
       shopSlots: new Array(c.plots).fill(null),
       decoSlots: new Array(c.plots).fill(null),
       perfectStreak: 0,
-      completed: false
+      completed: false,
+      dayLimitNotified: false
     })),
     festivals: DD.FESTIVALS.map(f => ({ id: f.id, cooldownUntilDay: 0, active: false, daysLeft: 0, timesHosted: 0 })),
     globalDayCount: 1, // increments every day played across the whole game, used for festival unlock gating
