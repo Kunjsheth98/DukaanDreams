@@ -38,6 +38,7 @@ function cacheDom() {
   DD.el.fullscreenBtn = document.getElementById('fullscreen-btn');
   DD.el.soundBtn = document.getElementById('sound-btn');
   DD.el.noteBtn = document.getElementById('note-btn');
+  DD.el.resetBtnHeader = document.getElementById('reset-btn-header');
   DD.el.streetScene = document.getElementById('street-scene');
   DD.el.shopRefList = document.getElementById('shop-ref-list');
   DD.el.decoRefList = document.getElementById('deco-ref-list');
@@ -88,6 +89,7 @@ function wireHeader() {
   });
 
   DD.el.noteBtn.addEventListener('click', showNote);
+  DD.el.resetBtnHeader.addEventListener('click', DD.confirmResetGame);
 }
 
 function showNote() {
@@ -136,8 +138,8 @@ function showTutorialIfNeeded(onDone) {
     '<h2>Welcome to Dukaan Dreams 🪔</h2>' +
     '<p>Build shops on the <strong>upper row</strong> and street furniture on the <strong>lower footpath</strong> — they never block each other.</p>' +
     '<p>Customers walk in from the left with a patience bar. Serve them before it runs out, and keep a shop capacity free so lines don\'t form.</p>' +
-    '<p>A <strong>Bus Stop</strong> drops a busload of fresh customers every 13 seconds once you build one — a high-capacity <strong>Chaat Corner</strong> placed nearby can soak up the crowd.</p>' +
-    '<p>Each city has one cumulative money target across all its days — no daily quota, just steady progress. Nothing moves until you press <strong>Start Day</strong>.</p>' +
+    '<p>A <strong>Bus Stop</strong> triggers once each day and drops a batch of fresh customers right at its spot — a one-time daily crowd boost, not a repeating spawn. A high-capacity <strong>Chaat Corner</strong> (the HOLDING shop) placed nearby can soak up that whole crowd and release it gradually.</p>' +
+    '<p>Each city has a money target and a strict day limit. Hit the target in time and the next city unlocks — miss it and you\'ll restart that city fresh (with half your building costs refunded). Nothing moves until you press <strong>Start Day</strong>.</p>' +
     '<div class="modal-actions"><button class="btn btn-primary btn-large" id="tut-ok">Got it, let\'s trade!</button></div>',
     {
       dismissible: false,

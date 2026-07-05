@@ -7,60 +7,70 @@ window.DD = window.DD || {};
 
 DD.SHOP_TYPES = [
   { id: 'chai', name: 'Chai Tapri', icon: 'assets/shops/chai.png', baseCost: 40,
+    role: '⚡ Fast & Cheap — quickest turnover of any shop, ideal as your very first stall',
     tiers: [
       { img: 'assets/shops/chai.png',    cap: 2, dwell: 2.0, price: 8,  upgradeCost: 0 },
       { img: 'assets/shops/chai-t2.png', cap: 3, dwell: 1.6, price: 14, upgradeCost: 80 },
       { img: 'assets/shops/chai-t3.png', cap: 4, dwell: 1.3, price: 22, upgradeCost: 200 }
     ] },
   { id: 'vadapav', name: 'Vada Pav Cart', icon: 'assets/shops/vadapav.png', baseCost: 70,
+    role: '🥪 Balanced Snack Stop — a bit slower than Chai but pays noticeably more',
     tiers: [
       { img: 'assets/shops/vadapav.png',    cap: 2, dwell: 2.5, price: 14, upgradeCost: 0 },
       { img: 'assets/shops/vadapav-t2.png', cap: 3, dwell: 2.0, price: 24, upgradeCost: 140 },
       { img: 'assets/shops/vadapav-t3.png', cap: 4, dwell: 1.6, price: 38, upgradeCost: 320 }
     ] },
   { id: 'chaat', name: 'Chaat Corner', icon: 'assets/shops/chaat.png', baseCost: 100, holding: true,
+    role: '🏛️ HOLDING SHOP — by far the highest capacity. Its job is to soak up a whole crowd (especially right after a Bus Stop drop) and release them gradually so they spread out across your other shops instead of overwhelming one plot',
     tiers: [
       { img: 'assets/shops/chaat.png',    cap: 4, dwell: 3.2, price: 16, upgradeCost: 0 },
       { img: 'assets/shops/chaat-t2.png', cap: 6, dwell: 2.8, price: 26, upgradeCost: 180 },
       { img: 'assets/shops/chaat-t3.png', cap: 8, dwell: 2.4, price: 40, upgradeCost: 380 }
     ] },
   { id: 'kulfi', name: 'Kulfi Cart', icon: 'assets/shops/kulfi.png', baseCost: 90,
+    role: '🍧 Quick Dessert — fast visits, solid price, works well anywhere on the street',
     tiers: [
       { img: 'assets/shops/kulfi.png',    cap: 2, dwell: 2.2, price: 12, upgradeCost: 0 },
       { img: 'assets/shops/kulfi-t2.png', cap: 3, dwell: 1.8, price: 20, upgradeCost: 160 },
       { img: 'assets/shops/kulfi-t3.png', cap: 4, dwell: 1.5, price: 32, upgradeCost: 340 }
     ] },
   { id: 'mithai', name: 'Mithai Shop', icon: 'assets/shops/mithai.png', baseCost: 220,
+    role: '🎁 Premium Sweets — slower visits but high value per customer',
     tiers: [
       { img: 'assets/shops/mithai.png',    cap: 3, dwell: 3.5, price: 35, upgradeCost: 0 },
       { img: 'assets/shops/mithai-t2.png', cap: 4, dwell: 3.0, price: 60, upgradeCost: 400 },
       { img: 'assets/shops/mithai-t3.png', cap: 5, dwell: 2.5, price: 95, upgradeCost: 800 }
     ] },
   { id: 'saree', name: 'Saree Boutique', icon: 'assets/shops/saree.png', baseCost: 350,
+    role: '👗 Fashion Boutique — long browsing time, strong margins once established',
     tiers: [
       { img: 'assets/shops/saree.png',    cap: 2, dwell: 5.0, price: 70,  upgradeCost: 0 },
       { img: 'assets/shops/saree-t2.png', cap: 3, dwell: 4.2, price: 120, upgradeCost: 650 },
       { img: 'assets/shops/saree-t3.png', cap: 4, dwell: 3.5, price: 190, upgradeCost: 1300 }
     ] },
   { id: 'jewel', name: 'Johari Jewellery', icon: 'assets/shops/jewel.png', baseCost: 600,
+    role: '💎 Luxury — longest visits and highest prices in the game; low capacity by design',
     tiers: [
       { img: 'assets/shops/jewel.png',    cap: 2, dwell: 6.0, price: 130, upgradeCost: 0 },
       { img: 'assets/shops/jewel-t2.png', cap: 3, dwell: 5.0, price: 220, upgradeCost: 1100 },
       { img: 'assets/shops/jewel-t3.png', cap: 3, dwell: 4.0, price: 340, upgradeCost: 2200 }
     ] },
   { id: 'spice', name: 'Spice Stall', icon: 'assets/shops/spice.png', baseCost: 160,
+    role: '🌶️ Everyday Stop — reliable mid-range income, good all-rounder',
     tiers: [
       { img: 'assets/shops/spice.png',    cap: 2, dwell: 2.8, price: 22, upgradeCost: 0 },
       { img: 'assets/shops/spice-t2.png', cap: 3, dwell: 2.3, price: 36, upgradeCost: 300 },
       { img: 'assets/shops/spice-t3.png', cap: 4, dwell: 1.9, price: 56, upgradeCost: 600 }
     ] },
   { id: 'handicraft', name: 'Handicraft Shop', icon: 'assets/shops/handicraft.png', baseCost: 300,
+    role: '🎨 Souvenir Stop — moderate speed with good margins',
     tiers: [
       { img: 'assets/shops/handicraft.png',    cap: 2, dwell: 4.0, price: 45,  upgradeCost: 0 },
       { img: 'assets/shops/handicraft-t2.png', cap: 3, dwell: 3.3, price: 75,  upgradeCost: 550 },
       { img: 'assets/shops/handicraft-t3.png', cap: 4, dwell: 2.8, price: 115, upgradeCost: 1100 }
     ] },
   { id: 'book', name: 'Bookstall', icon: 'assets/shops/book.png', baseCost: 150,
+    role: '📚 Leisure Stop — steady, affordable, easy early-game pick',
     tiers: [
       { img: 'assets/shops/book.png',    cap: 2, dwell: 3.2, price: 20, upgradeCost: 0 },
       { img: 'assets/shops/book-t2.png', cap: 3, dwell: 2.6, price: 34, upgradeCost: 280 },
@@ -82,36 +92,38 @@ DD.FURNITURE_TYPES = [
   { id: 'diya',      name: 'Diya Lights',  icon: 'assets/decorations/diya.png',      cost: 120, kind: 'pass', cap: 99, dwell: 0, charge: 0,
     blurb: 'Warm festive glow. Happiness only.' },
   { id: 'busstop',   name: 'Bus Stop',     icon: 'assets/decorations/busstop.png',   cost: 300, kind: 'bus',  cap: 99, dwell: 0, charge: 0,
-    blurb: 'A bus drops off 3 new customers here every 13 seconds.' }
+    blurb: 'Once each day, a bus pulls up right here and drops off a batch of fresh customers — a one-time daily crowd boost, not a repeating spawn.' }
 ];
 
 DD.furnitureById = id => DD.FURNITURE_TYPES.find(f => f.id === id);
 
 DD.CITIES = [
-  { id: 'mumbai',  name: 'Mumbai — Chowpatty Lane',   unlockRep: 0,    plots: 7,  days: 10, target: 750,
+  { id: 'mumbai',  name: 'Mumbai — Chowpatty Lane',   plots: 7,  days: 10, target: 750,
     shops: ['chai', 'vadapav', 'chaat', 'kulfi'], moneyMin: 40, moneyMax: 90,
     skyline: 'assets/skylines/mumbai.jpg' },
-  { id: 'delhi',   name: 'Delhi — Chandni Chowk',     unlockRep: 600,  plots: 8,  days: 13, target: 2000,
+  { id: 'delhi',   name: 'Delhi — Chandni Chowk',     plots: 8,  days: 13, target: 2000,
     shops: ['saree', 'jewel', 'mithai', 'spice', 'chai'], moneyMin: 56, moneyMax: 124,
     skyline: 'assets/skylines/delhi.jpg' },
-  { id: 'jaipur',  name: 'Jaipur — Johari Bazaar',    unlockRep: 1500, plots: 8,  days: 16, target: 3400,
+  { id: 'jaipur',  name: 'Jaipur — Johari Bazaar',    plots: 8,  days: 16, target: 3400,
     shops: ['jewel', 'handicraft', 'saree', 'chai'], moneyMin: 72, moneyMax: 158,
     skyline: 'assets/skylines/jaipur.jpg' },
-  { id: 'kolkata', name: 'Kolkata — College Street',  unlockRep: 2800, plots: 8,  days: 19, target: 4800,
+  { id: 'kolkata', name: 'Kolkata — College Street',  plots: 8,  days: 19, target: 4800,
     shops: ['book', 'mithai', 'chai', 'chaat'], moneyMin: 88, moneyMax: 192,
     skyline: 'assets/skylines/kolkata.jpg' },
-  { id: 'kochi',   name: 'Kochi — Spice Market',      unlockRep: 4500, plots: 9,  days: 23, target: 6200,
+  { id: 'kochi',   name: 'Kochi — Spice Market',      plots: 9,  days: 23, target: 6200,
     shops: ['spice', 'handicraft', 'kulfi', 'vadapav'], moneyMin: 104, moneyMax: 226,
     skyline: 'assets/skylines/kochi.jpg' },
-  { id: 'goa',     name: 'Goa — Night Market',        unlockRep: 7000, plots: 10, days: 28, target: 7800,
+  { id: 'goa',     name: 'Goa — Night Market',        plots: 10, days: 28, target: 7800,
     shops: ['chai', 'vadapav', 'chaat', 'kulfi', 'mithai', 'saree', 'jewel', 'spice', 'handicraft', 'book'],
     moneyMin: 120, moneyMax: 260, skyline: 'assets/skylines/goa.jpg' }
 ];
 
 DD.BASE_SPAWN_MS = 3500;
 DD.DAY_SECONDS = 45;
-DD.BUS_INTERVAL_S = 13;
 DD.PLOT_WIDTH = 172;
+DD.BUS_TRIGGER_MIN_S = 6;   // once-per-day bus arrival window
+DD.BUS_TRIGGER_MAX_S = 12;
+DD.BUS_BATCH_SIZE = 5;      // customers dropped by the once-daily bus
 
 DD.spawnIntervalFor = cityIndex => DD.BASE_SPAWN_MS / (1 + cityIndex * 0.15);
 
@@ -139,7 +151,7 @@ DD.ACHIEVEMENTS = [
   { id: 'all_cities',      name: 'Across India',     desc: 'Unlock all six cities.' },
   { id: 'perfect_streak_3',name: 'Unstoppable',      desc: 'Three perfect-happiness days in a row.' },
   { id: 'shop_maxed',      name: 'Top of the Trade', desc: 'Upgrade a shop to Tier 3.' },
-  { id: 'bus_master',      name: 'Full Busload',     desc: 'Serve 100 customers dropped off by buses.' },
+  { id: 'bus_master',      name: 'Full Busload',     desc: 'Serve 50 customers dropped off by buses.' },
   { id: 'vip_served',      name: 'VIP Treatment',    desc: 'Serve your first VIP customer.' }
 ];
 

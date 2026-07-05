@@ -285,14 +285,26 @@ DD.spawnAmbientTraffic = function () {
   }
 };
 
-DD.spawnBusEl = function () {
+DD.spawnBusEl = function (targetX) {
   const road = DD.el.roadLayer;
   const bus = document.createElement('img');
   bus.src = 'assets/vehicles/bus.png';
   bus.className = 'bus-vehicle';
-  bus.style.animationDuration = '4.2s';
+  bus.style.left = '-220px';
   road.appendChild(bus);
-  setTimeout(() => bus.remove(), 4300);
+
+  const stopX = targetX - 75; // roughly center the 150px-wide bus over the stop
+  const offRightX = DD.runtime.streetWidth + 250;
+
+  requestAnimationFrame(() => {
+    bus.style.transition = 'left 1.7s ease-in-out';
+    bus.style.left = stopX + 'px';
+  });
+  setTimeout(() => {
+    bus.style.transition = 'left 1.5s ease-in';
+    bus.style.left = offRightX + 'px';
+  }, 2500); // ~1.7s drive-in + ~0.8s dwell at the stop
+  setTimeout(() => bus.remove(), 4200);
 };
 
 // ---------------------------------------------------------------
@@ -332,7 +344,20 @@ DD.createCustomerEl = function (cust) {
   if (!rig) {
     div.querySelector('.cust-img').style.animationDuration = bobDuration + 's';
   } else {
-    div.querySelectorAll('.rig-part').forEach(el => { el.style.animationDuration = bobDuration + 's'; });
+    const spriteWrap = div.querySelector('.sprite-wrap');
+    const rigParts = div.querySelectorAll('.rig-part');
+    rigParts.forEach(el => {
+      el.style.animationDuration = bobDuration + 's';
+      el.addEventListener('error', () => {
+        // one of the 3 rig pieces failed to load (bad path/case-mismatch on deploy) —
+        // fall back to the normal single-pose sprite instead of leaving nothing visible
+        if (spriteWrap.dataset.fellBack) return;
+        spriteWrap.dataset.fellBack = '1';
+        div.classList.remove('rigged');
+        spriteWrap.innerHTML = '<img class="cust-img" src="assets/customers/customer-' + cust.spriteIndex + '.png" alt="customer" />';
+        spriteWrap.querySelector('.cust-img').style.animationDuration = bobDuration + 's';
+      }, { once: true });
+    });
   }
   DD.el.walkLayer.appendChild(div);
   DD.customerEls[cust.id] = div;
@@ -366,11 +391,15 @@ DD.updateCustomerEl = function (cust) {
   }
 };
 
-DD.removeCustomerEl = function (custId) {
+DD.removeCustomerEl = function (custId, happy) {
   const div = DD.customerEls[custId];
   if (div) {
+    const reaction = document.createElement('div');
+    reaction.className = 'reaction-emoji';
+    reaction.textContent = happy ? '😊' : '😞';
+    div.appendChild(reaction);
     div.classList.add('leaving-fade');
-    setTimeout(() => div.remove(), 260);
+    setTimeout(() => div.remove(), 700);
     delete DD.customerEls[custId];
   }
 };
@@ -403,7 +432,7 @@ DD.renderWorldMap = function () {
         ? '<div class="city-mini-progress"><div class="city-mini-fill" style="width:' + pct + '%"></div></div>' +
           '<p class="muted">Day ' + citySave.day + ' / ' + c.days + ' · ' + DD.fmtMoney(citySave.cumulative) + ' / ' + DD.fmtMoney(c.target) + '</p>' +
           (citySave.completed ? '<p class="tag-done">✔ Target reached</p>' : '')
-        : '<p class="muted">🔒 Requires ' + c.unlockRep.toLocaleString('en-IN') + ' reputation</p>');
+        : '<p class="muted">🔒 Complete ' + DD.CITIES[i - 1].name + ' to unlock</p>');
     card.innerHTML += '</div>';
     if (unlocked) {
       card.addEventListener('click', () => DD.travelToCity(i));
@@ -428,7 +457,8 @@ DD.renderBuildPanel = function () {
       '<img src="' + def.icon + '" class="ref-icon" alt="" />' +
       '<div class="ref-info"><strong>' + def.name + '</strong>' +
       '<span>Build: ' + DD.fmtMoney(def.baseCost) + '</span>' +
-      '<span class="muted">' + t1.cap + ' cap · ' + t1.dwell + 's · ' + DD.fmtMoney(t1.price) + '</span></div>';
+      '<span class="muted">' + t1.cap + ' cap · ' + t1.dwell + 's · ' + DD.fmtMoney(t1.price) + '</span>' +
+      '<span class="role-text">' + def.role + '</span></div>';
     row.addEventListener('click', () => DD.highlightEmptyShopPlots());
     shopList.appendChild(row);
   });

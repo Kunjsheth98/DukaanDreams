@@ -117,7 +117,9 @@ DD.isCityUnlocked = function (idx) {
 
 DD.refreshCityUnlocks = function () {
   DD.CITIES.forEach((c, i) => {
-    if (DD.state.reputation >= c.unlockRep && DD.state.unlockedCityIds.indexOf(c.id) === -1) {
+    if (i === 0) return; // Mumbai is always unlocked
+    const prevCompleted = DD.state.cities[i - 1] && DD.state.cities[i - 1].completed;
+    if (prevCompleted && DD.state.unlockedCityIds.indexOf(c.id) === -1) {
       DD.state.unlockedCityIds.push(c.id);
     }
   });

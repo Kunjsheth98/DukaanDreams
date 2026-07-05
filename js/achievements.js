@@ -29,3 +29,7 @@ DD.checkRepAchievements = function () {
 DD.checkCityAchievements = function () {
   if (DD.state.unlockedCityIds.length >= DD.CITIES.length) DD.unlockAchievement('all_cities');
 };
+
+DD.checkBusAchievement = function () {
+  if (DD.state.stats.busCustomersServed >= 50) DD.unlockAchievement('bus_master');
+};

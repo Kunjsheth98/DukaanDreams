@@ -28,7 +28,8 @@ DD.openShopPickerModal = function (index) {
     return '<div class="pick-row ' + (afford ? '' : 'disabled') + '" data-shop="' + id + '">' +
       '<img src="' + def.icon + '" class="pick-icon" alt="" />' +
       '<div class="pick-info"><strong>' + def.name + (def.holding ? ' <span class="tag-holding">HOLDING</span>' : '') + '</strong>' +
-      '<span>' + t1.cap + ' capacity · ' + t1.dwell + 's visit · ' + DD.fmtMoney(t1.price) + '/customer</span></div>' +
+      '<span>' + t1.cap + ' capacity · ' + t1.dwell + 's visit · ' + DD.fmtMoney(t1.price) + '/customer</span>' +
+      '<span class="role-text">' + def.role + '</span></div>' +
       '<div class="pick-cost">' + DD.fmtMoney(def.baseCost) + '</div></div>';
   }).join('');
 
@@ -80,6 +81,7 @@ DD.openShopManageModal = function (index) {
   const refund = Math.round(invested * 0.5);
 
   let body = '<h2>' + def.name + ' <span class="tag-tier">Tier ' + (si.tier + 1) + '</span></h2>';
+  body += '<p class="role-text">' + def.role + '</p>';
   if (occupied) body += '<p class="lock-note">🔒 Occupied right now — upgrade and sell are disabled until it clears.</p>';
   body += '<img src="' + tier.img + '" class="manage-img" alt="" />';
   body += '<div class="stat-row"><span>Capacity</span><strong>' + tier.cap + '</strong></div>';
@@ -206,7 +208,7 @@ DD.openDecoManageModal = function (index) {
   if (occupied) body += '<p class="lock-note">🔒 In use right now — remove disabled until free.</p>';
   body += '<img src="' + def.icon + '" class="manage-img small" alt="" />';
   body += '<p class="muted">' + def.blurb + '</p>';
-  if (def.kind === 'bus') body += '<p class="muted">Spawns 3 customers every ' + DD.BUS_INTERVAL_S + 's while a day is active.</p>';
+  if (def.kind === 'bus') body += '<p class="muted">Triggers once per day, ' + DD.BUS_TRIGGER_MIN_S + '-' + DD.BUS_TRIGGER_MAX_S + 's into the day, dropping ' + DD.BUS_BATCH_SIZE + ' customers right here.</p>';
   body += '<div class="modal-actions"><button class="btn btn-danger" id="mgmt-remove" ' + (occupied ? 'disabled' : '') + '>Remove — refund ' + DD.fmtMoney(refund) + '</button></div>';
 
   DD.showModal(body, {

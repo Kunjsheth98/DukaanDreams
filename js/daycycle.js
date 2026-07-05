@@ -25,7 +25,9 @@ DD.initRuntime = function () {
     dayCustomersTotal: 0, // mirrors spawned, used by HUD live pct against resolved
     earningsToday: 0,
     activeFestivalEffects: [],
-    currentModifier: DD.DAY_MODIFIERS[0]
+    currentModifier: DD.DAY_MODIFIERS[0],
+    busUsedToday: false,
+    busTriggerTime: 0
   };
 };
 
@@ -167,6 +169,8 @@ DD.actuallyStartDay = function (modifier) {
   rt.dayCustomersTotal = 0;
   rt.earningsToday = 0;
   rt.pendingModifier = null;
+  rt.busUsedToday = false;
+  rt.busTriggerTime = DD.rand(DD.BUS_TRIGGER_MIN_S, DD.BUS_TRIGGER_MAX_S);
 
   DD.el.streetScene.classList.remove('paused');
   DD.renderHUD();
@@ -192,7 +196,7 @@ DD.customerCallbacks = {
     si.streak = (si.streak || 0) + 1;
     if (cust.isVIP) { DD.state.stats.vipServed++; DD.unlockAchievement('vip_served'); DD.Sound.play('vip'); }
     else DD.Sound.play('coin');
-    if (cust.fromBus) DD.state.stats.busCustomersServed++;
+    if (cust.fromBus) { DD.state.stats.busCustomersServed++; DD.checkBusAchievement(); }
     DD.checkMoneyAchievements();
     DD.updateShopOccupancyVisual(cust.targetPlotIndex);
     DD.renderHUD();
@@ -224,8 +228,7 @@ function resolveCustomer(cust) {
     rt.dayCustomersHappy++;
     DD.state.stats.customersHappy++;
   }
-  // reset streak on shops where this customer gave up in queue without buying
-  DD.removeCustomerEl(cust.id);
+  DD.removeCustomerEl(cust.id, cust.servedAnything);
   DD.renderHUD();
 }
 
@@ -250,15 +253,15 @@ DD.tick = function (dt) {
     DD.spawnCustomer({});
   }
 
-  // bus timer (only if a bus stop exists on the street)
+  // bus timer — fires exactly ONCE per day, at the actual bus stop's position
   const busPlotIndex = rt.decoInstances.findIndex(d => d && d.typeId === 'busstop');
-  if (busPlotIndex !== -1) {
+  if (busPlotIndex !== -1 && !rt.busUsedToday) {
     rt.busTimer += dt;
-    if (rt.busTimer >= DD.BUS_INTERVAL_S) {
-      rt.busTimer -= DD.BUS_INTERVAL_S;
+    if (rt.busTimer >= rt.busTriggerTime) {
+      rt.busUsedToday = true;
       DD.Sound.play('bus');
-      DD.spawnBusEl();
-      for (let i = 0; i < 3; i++) DD.spawnCustomer({ fromBus: true, startPlotIndex: busPlotIndex });
+      DD.spawnBusEl(DD.runtime.plotX[busPlotIndex]);
+      for (let i = 0; i < DD.BUS_BATCH_SIZE; i++) DD.spawnCustomer({ fromBus: true, startPlotIndex: busPlotIndex });
     }
   }
 
@@ -292,7 +295,7 @@ DD.endDay = function () {
   rt.customers.forEach(cust => {
     rt.dayCustomersResolved++;
     if (cust.servedAnything) { rt.dayCustomersHappy++; DD.state.stats.customersHappy++; }
-    DD.removeCustomerEl(cust.id);
+    DD.removeCustomerEl(cust.id, cust.servedAnything);
   });
   rt.customers = [];
 
@@ -320,12 +323,12 @@ DD.endDay = function () {
   DD.state.reputation += repGain;
   citySave.cumulative += rt.earningsToday;
 
-  const justCompleted = !citySave.completed && citySave.cumulative >= cityDef.target;
-  if (justCompleted) citySave.completed = true;
-
-  const wasFinalScheduledDay = citySave.day === cityDef.days;
-  const showDayLimitNotice = wasFinalScheduledDay && !citySave.dayLimitNotified;
-  if (showDayLimitNotice) citySave.dayLimitNotified = true;
+  const alreadyCompleted = citySave.completed;
+  const targetHitNow = !alreadyCompleted && citySave.cumulative >= cityDef.target;
+  if (targetHitNow) {
+    citySave.completed = true;
+    DD.refreshCityUnlocks();
+  }
 
   // festival day countdown
   DD.state.festivals.forEach(f => {
@@ -339,16 +342,27 @@ DD.endDay = function () {
     }
   });
 
+  const dayJustFinished = citySave.day;
   citySave.day += 1;
   DD.state.globalDayCount += 1;
 
-  DD.refreshCityUnlocks();
   DD.checkRepAchievements();
   DD.checkCityAchievements();
   DD.saveState();
-
   DD.Sound.play('dayend');
-  DD.showDayEndModal({ totalSpawned, happyPct, isPerfect, bonus, repGain, earningsToday: rt.earningsToday, justCompleted, showDayLimitNotice, cityDef, citySave });
+
+  const summary = { totalSpawned, happyPct, isPerfect, bonus, repGain, earningsToday: rt.earningsToday, cityDef, citySave };
+
+  if (targetHitNow) {
+    const nextIndex = DD.state.cityIndex + 1;
+    const hasNext = nextIndex < DD.CITIES.length;
+    DD.showCityCompleteModal(Object.assign({}, summary, { dayUsed: dayJustFinished, hasNext, nextCityName: hasNext ? DD.CITIES[nextIndex].name : null }));
+  } else if (!citySave.completed && dayJustFinished >= cityDef.days) {
+    DD.showCityFailedModal(summary);
+  } else {
+    DD.showDayEndModal(summary);
+  }
+
   DD.renderHUD();
 };
 
@@ -361,17 +375,8 @@ DD.showDayEndModal = function (r) {
   body += '<div class="stat-card"><span class="stat-val">+' + Math.round(r.repGain) + '</span><span class="stat-label">Reputation</span></div>';
   body += '</div>';
   if (r.isPerfect) body += '<div class="perfect-banner">🌟 Perfect Day! Bonus ' + DD.fmtMoney(r.bonus) + ' awarded.</div>';
-  if (r.justCompleted) body += '<div class="perfect-banner">🏁 City target reached! ' + r.cityDef.name + ' complete — keep playing or explore the World Map.</div>';
-  if (r.showDayLimitNotice) {
-    const hit = r.citySave.cumulative >= r.cityDef.target;
-    body += '<div class="daylimit-banner ' + (hit ? 'hit' : 'miss') + '">' +
-      '<strong>' + (hit ? '✅ Target achieved within ' + r.cityDef.days + ' days!' : '⏳ Day ' + r.cityDef.days + ' used up — target not reached yet.') + '</strong>' +
-      '<p>' + (hit
-        ? 'Great run! You can keep playing extra days here to build up more before moving on, or head to the World Map.'
-        : 'No penalty — you can keep playing as many extra days as you need (Day ' + (r.cityDef.days + 1) + ', ' + (r.cityDef.days + 2) + '...) until you reach ' + DD.fmtMoney(r.cityDef.target) + '.') +
-      '</p></div>';
-  }
-  body += '<p class="muted">City progress: ' + DD.fmtMoney(r.citySave.cumulative) + ' / ' + DD.fmtMoney(r.cityDef.target) + '</p>';
+  body += '<p class="muted">City progress: ' + DD.fmtMoney(r.citySave.cumulative) + ' / ' + DD.fmtMoney(r.cityDef.target) +
+    (r.citySave.completed ? ' <strong>(target already reached — bonus days)</strong>' : ' · Day ' + (r.citySave.day - 1) + ' of ' + r.cityDef.days) + '</p>';
   body += '<div class="modal-actions"><button class="btn btn-primary btn-large" id="next-day-btn">Continue to Day ' + r.citySave.day + '</button></div>';
 
   DD.showModal(body, {
@@ -384,4 +389,86 @@ DD.showDayEndModal = function (r) {
       });
     }
   });
+};
+
+DD.showCityCompleteModal = function (r) {
+  let body = '<h2>🎉 Target Reached!</h2>';
+  body += '<p class="gate-day">' + r.cityDef.name + ' complete — done in ' + r.dayUsed + ' of ' + r.cityDef.days + ' days.</p>';
+  body += '<div class="dayend-grid">';
+  body += '<div class="stat-card"><span class="stat-val">' + DD.fmtMoney(r.citySave.cumulative) + '</span><span class="stat-label">Total Earned</span></div>';
+  body += '<div class="stat-card"><span class="stat-val">' + DD.fmtMoney(r.cityDef.target) + '</span><span class="stat-label">Target</span></div>';
+  body += '</div>';
+  if (r.isPerfect) body += '<div class="perfect-banner">🌟 Perfect final day! Bonus ' + DD.fmtMoney(r.bonus) + ' awarded.</div>';
+  if (r.hasNext) {
+    body += '<p>🔓 <strong>' + r.nextCityName + '</strong> is now unlocked!</p>';
+    body += '<div class="modal-actions">' +
+      '<button class="btn btn-ghost" id="keep-playing-btn">Keep Playing ' + r.cityDef.name.split(' — ')[0] + '</button>' +
+      '<button class="btn btn-primary btn-large" id="goto-map-btn">Continue to World Map →</button>' +
+      '</div>';
+  } else {
+    body += '<div class="perfect-banner">🏆 You\'ve completed every city in Dukaan Dreams!</div>';
+    body += '<div class="modal-actions"><button class="btn btn-primary btn-large" id="keep-playing-btn">Keep Playing</button></div>';
+  }
+
+  DD.showModal(body, {
+    dismissible: false,
+    extraClass: 'wide',
+    onRender: root => {
+      const keepBtn = root.querySelector('#keep-playing-btn');
+      if (keepBtn) keepBtn.addEventListener('click', () => { DD.closeModal(); DD.openDayStartGate(); });
+      const mapBtn = root.querySelector('#goto-map-btn');
+      if (mapBtn) mapBtn.addEventListener('click', () => { DD.closeModal(); DD.showScreen('worldmap'); });
+    }
+  });
+};
+
+DD.showCityFailedModal = function (r) {
+  let body = '<h2>⏳ Day ' + r.cityDef.days + ' Used Up</h2>';
+  body += '<p class="gate-day">Target not reached in time.</p>';
+  body += '<div class="dayend-grid">';
+  body += '<div class="stat-card"><span class="stat-val">' + DD.fmtMoney(r.citySave.cumulative) + '</span><span class="stat-label">Reached</span></div>';
+  body += '<div class="stat-card"><span class="stat-val">' + DD.fmtMoney(r.cityDef.target) + '</span><span class="stat-label">Target</span></div>';
+  body += '</div>';
+  body += '<p class="muted">This level didn\'t hit its target in time. Restarting refunds half the value of everything you built, then gives you a fresh empty street to try again.</p>';
+  body += '<div class="modal-actions"><button class="btn btn-danger btn-large" id="restart-city-btn">🔄 Restart ' + r.cityDef.name.split(' — ')[0] + '</button></div>';
+
+  DD.showModal(body, {
+    dismissible: false,
+    extraClass: 'wide',
+    onRender: root => {
+      root.querySelector('#restart-city-btn').addEventListener('click', () => {
+        DD.closeModal();
+        DD.restartCurrentCity();
+      });
+    }
+  });
+};
+
+DD.restartCurrentCity = function () {
+  const cityDef = DD.currentCityDef();
+  const citySave = DD.currentCitySave();
+
+  let refund = 0;
+  citySave.shopSlots.forEach(slot => {
+    if (!slot) return;
+    const def = DD.shopById(slot.typeId);
+    const invested = def.baseCost + (slot.tier >= 1 ? def.tiers[1].upgradeCost : 0) + (slot.tier >= 2 ? def.tiers[2].upgradeCost : 0);
+    refund += Math.round(invested * 0.5);
+  });
+  citySave.decoSlots.forEach(slot => {
+    if (!slot) return;
+    const def = DD.furnitureById(slot.typeId);
+    refund += Math.round(def.cost * 0.5);
+  });
+  DD.state.money += refund;
+
+  citySave.day = 1;
+  citySave.cumulative = 0;
+  citySave.perfectStreak = 0;
+  citySave.completed = false;
+  citySave.shopSlots = new Array(cityDef.plots).fill(null);
+  citySave.decoSlots = new Array(cityDef.plots).fill(null);
+  DD.saveState();
+  DD.toast('Restarted ' + cityDef.name + ' — refunded ' + DD.fmtMoney(refund), 'info');
+  DD.enterCityScreen();
 };
