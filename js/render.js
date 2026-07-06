@@ -30,10 +30,17 @@ DD.renderHUD = function () {
   DD.el.hudHappy.className = 'hud-happy ' + (happyPct >= 90 ? 'good' : happyPct >= 60 ? 'ok' : 'bad');
 
   if (rt.dayActive) {
-    const remain = Math.max(0, rt.dayTimeRemaining);
-    DD.el.hudTimer.textContent = Math.ceil(remain) + 's';
+    if (rt.windingDown) {
+      DD.el.hudTimer.textContent = 'Wrapping up…';
+      DD.el.hudTimer.classList.remove('urgent');
+    } else {
+      const remain = Math.max(0, rt.dayTimeRemaining);
+      DD.el.hudTimer.textContent = Math.ceil(remain) + 's';
+      DD.el.hudTimer.classList.toggle('urgent', remain <= 10);
+    }
   } else {
     DD.el.hudTimer.textContent = '—';
+    DD.el.hudTimer.classList.remove('urgent');
   }
 
   DD.el.pauseBtn.textContent = rt.paused ? '▶ Resume' : '⏸ Pause';
@@ -63,6 +70,12 @@ DD.buildStreetScene = function () {
   skyline.className = 'skyline-layer';
   skyline.style.backgroundImage = 'url(' + cityDef.skyline + ')';
   scene.appendChild(skyline);
+
+  const weather = document.createElement('div');
+  weather.className = 'weather-overlay';
+  weather.id = 'weather-overlay';
+  scene.appendChild(weather);
+  DD.el.weatherOverlay = weather;
 
   const road = document.createElement('div');
   road.className = 'road-layer';
@@ -241,6 +254,23 @@ DD.refreshDecoPlot = function (index) {
  * rebuilding the whole plot (and re-decoding the icon image) every time
  * a customer sits down or leaves a bench.
  */
+DD.updateBusCountdown = function (plotIndex, remaining) {
+  const div = DD.el.footpathLayer.querySelector('.deco-plot[data-index="' + plotIndex + '"]');
+  if (!div) return;
+  let badge = div.querySelector('.bus-countdown');
+  if (remaining == null) {
+    if (badge) badge.remove();
+    return;
+  }
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.className = 'bus-countdown';
+    const content = div.querySelector('.plot-content');
+    if (content) content.appendChild(badge);
+  }
+  badge.textContent = '🚌 ' + remaining + 's';
+};
+
 DD.updateDecoOccupancyVisual = function (index) {
   const div = DD.el.footpathLayer.querySelector('.deco-plot[data-index="' + index + '"]');
   const di = DD.runtime.decoInstances[index];
@@ -312,17 +342,26 @@ DD.spawnBusEl = function (targetX) {
 // ---------------------------------------------------------------
 DD.customerEls = {};
 
-DD.RIGGED_SPRITES = { 1: { hipFraction: 0.656 } }; // trial: customer-1 uses a 3-piece walk rig
+// Trial-tested walk rig: customers 3 and 5 wear long sarees/dresses with no
+// visible leg separation in the source art, so they keep the single-pose
+// bob animation instead — forcing a leg-split there would look wrong.
+DD.RIGGED_SPRITES = {
+  1: { hipFraction: 0.656 },
+  2: { hipFraction: 0.660 },
+  4: { hipFraction: 0.620 },
+  6: { hipFraction: 0.656 },
+  7: { hipFraction: 0.750 }
+};
 
 DD.createCustomerEl = function (cust) {
   const div = document.createElement('div');
-  const rig = DD.RIGGED_SPRITES[cust.spriteIndex] && DD.RIG_ASSETS ? DD.RIGGED_SPRITES[cust.spriteIndex] : null;
+  const rig = DD.RIGGED_SPRITES[cust.spriteIndex] && DD.RIG_ASSETS && DD.RIG_ASSETS[cust.spriteIndex] ? DD.RIGGED_SPRITES[cust.spriteIndex] : null;
   div.className = 'customer' + (cust.isVIP ? ' vip' : '') + (rig ? ' rigged' : '');
   div.dataset.id = cust.id;
 
   let spriteHtml;
   if (rig) {
-    const assets = DD.RIG_ASSETS || {};
+    const assets = DD.RIG_ASSETS[cust.spriteIndex];
     spriteHtml =
       '<div class="rig-stage" style="--hip-y:' + (rig.hipFraction * 100) + '%">' +
       '<img class="rig-part rig-legL" src="' + assets.legL + '" alt="" />' +
@@ -431,7 +470,7 @@ DD.renderWorldMap = function () {
       (unlocked
         ? '<div class="city-mini-progress"><div class="city-mini-fill" style="width:' + pct + '%"></div></div>' +
           '<p class="muted">Day ' + citySave.day + ' / ' + c.days + ' · ' + DD.fmtMoney(citySave.cumulative) + ' / ' + DD.fmtMoney(c.target) + '</p>' +
-          (citySave.completed ? '<p class="tag-done">✔ Target reached</p>' : '')
+          (citySave.completed ? '<p class="tag-done">✔ Cleared' + (citySave.bestCompletionDay ? ' — 🏆 Best: Day ' + citySave.bestCompletionDay : '') + '</p>' : '')
         : '<p class="muted">🔒 Complete ' + DD.CITIES[i - 1].name + ' to unlock</p>');
     card.innerHTML += '</div>';
     if (unlocked) {

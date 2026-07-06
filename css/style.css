@@ -240,6 +240,30 @@ p { margin: 6px 0; line-height: 1.4; }
 .cap-text-mini { font-size: 0.74em; font-weight: 800; color: var(--ink); text-shadow: 0 1px 2px rgba(255,255,255,0.7); }
 .cap-text-mini.small { font-size: 0.68em; }
 
+.bus-countdown {
+  position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+  background: rgba(40,18,5,0.85); color: #fff; font-size: 0.72em; font-weight: 800;
+  padding: 2px 8px; border-radius: 10px; white-space: nowrap; z-index: 5;
+  animation: busCountdownPulse 1s ease-in-out infinite;
+}
+@keyframes busCountdownPulse { 0%,100% { opacity: 0.85; } 50% { opacity: 1; transform: translateX(-50%) scale(1.05); } }
+
+#hud-timer.urgent { color: #ffdede; font-weight: 900; animation: timerUrgent 0.6s ease-in-out infinite; }
+@keyframes timerUrgent { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.weather-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 3; overflow: hidden; }
+.weather-rain {
+  background-image: repeating-linear-gradient(115deg, rgba(180,210,255,0.35) 0px, rgba(180,210,255,0.35) 1px, transparent 1px, transparent 14px);
+  background-size: 100% 100%;
+  animation: rainFall 0.35s linear infinite;
+}
+@keyframes rainFall { from { background-position: 0 0; } to { background-position: -20px 40px; } }
+.weather-heat {
+  background: radial-gradient(ellipse at 50% 30%, rgba(255,140,0,0.18), transparent 70%);
+  animation: heatPulse 2.2s ease-in-out infinite;
+}
+@keyframes heatPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+
 .pulse-hint { animation: pulseHint 0.7s ease-in-out 2; }
 @keyframes pulseHint { 0%,100% { filter: none; } 50% { filter: drop-shadow(0 0 10px var(--magenta)) brightness(1.15); } }
 

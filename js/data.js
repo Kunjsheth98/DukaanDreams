@@ -120,6 +120,7 @@ DD.CITIES = [
 
 DD.BASE_SPAWN_MS = 3500;
 DD.DAY_SECONDS = 45;
+DD.DAY_WINDDOWN_GRACE_S = 20; // after time runs out, give lingering customers this long to finish naturally
 DD.PLOT_WIDTH = 172;
 DD.BUS_TRIGGER_MIN_S = 6;   // once-per-day bus arrival window
 DD.BUS_TRIGGER_MAX_S = 12;

@@ -5,6 +5,8 @@
    ============================================================ */
 window.DD = window.DD || {};
 
+DD.BUSY_SERVICE_STATES = ['shop_entering', 'shop_inside', 'shop_exiting', 'furn_serve', 'furn_queue', 'shop_queue'];
+
 DD.initRuntime = function () {
   DD.runtime = {
     shopInstances: [],
@@ -27,7 +29,8 @@ DD.initRuntime = function () {
     activeFestivalEffects: [],
     currentModifier: DD.DAY_MODIFIERS[0],
     busUsedToday: false,
-    busTriggerTime: 0
+    busTriggerTime: 0,
+    lastBusCountdownShown: null
   };
 };
 
@@ -157,7 +160,13 @@ DD.actuallyStartDay = function (modifier) {
   rt.paused = false;
   rt.customers = [];
   DD.clearAllCustomerEls();
+  // Defensive reset: guarantees no shop/furniture can ever carry a stuck
+  // "phantom" occupant across days (e.g. from a previous day's abrupt cutoff).
+  rt.shopInstances.forEach(si => { if (si) { si.occupants = []; si.queue = []; } });
+  rt.decoInstances.forEach(di => { if (di) { di.occupants = []; di.queue = []; } });
   rt.dayTimeRemaining = DD.DAY_SECONDS;
+  rt.windingDown = false;
+  rt.windDownGraceRemaining = 0;
   rt.spawnTimer = 0;
   rt.busTimer = 0;
   rt.spawnIntervalMs = DD.spawnIntervalFor(DD.state.cityIndex) * spawnMult;
@@ -171,8 +180,12 @@ DD.actuallyStartDay = function (modifier) {
   rt.pendingModifier = null;
   rt.busUsedToday = false;
   rt.busTriggerTime = DD.rand(DD.BUS_TRIGGER_MIN_S, DD.BUS_TRIGGER_MAX_S);
+  rt.lastBusCountdownShown = null;
 
   DD.el.streetScene.classList.remove('paused');
+  if (DD.el.weatherOverlay) {
+    DD.el.weatherOverlay.className = 'weather-overlay' + (modifier.id === 'rainy' ? ' weather-rain' : modifier.id === 'heat' ? ' weather-heat' : '');
+  }
   DD.renderHUD();
 };
 
@@ -244,28 +257,47 @@ DD.tick = function (dt) {
   const rt = DD.runtime;
   if (!rt.dayActive || rt.paused) return;
 
-  rt.dayTimeRemaining -= dt;
+  if (!rt.windingDown) {
+    rt.dayTimeRemaining -= dt;
 
-  // spawn timer
-  rt.spawnTimer += dt * 1000;
-  if (rt.spawnTimer >= rt.spawnIntervalMs) {
-    rt.spawnTimer -= rt.spawnIntervalMs;
-    DD.spawnCustomer({});
-  }
-
-  // bus timer — fires exactly ONCE per day, at the actual bus stop's position
-  const busPlotIndex = rt.decoInstances.findIndex(d => d && d.typeId === 'busstop');
-  if (busPlotIndex !== -1 && !rt.busUsedToday) {
-    rt.busTimer += dt;
-    if (rt.busTimer >= rt.busTriggerTime) {
-      rt.busUsedToday = true;
-      DD.Sound.play('bus');
-      DD.spawnBusEl(DD.runtime.plotX[busPlotIndex]);
-      for (let i = 0; i < DD.BUS_BATCH_SIZE; i++) DD.spawnCustomer({ fromBus: true, startPlotIndex: busPlotIndex });
+    // spawn timer
+    rt.spawnTimer += dt * 1000;
+    if (rt.spawnTimer >= rt.spawnIntervalMs) {
+      rt.spawnTimer -= rt.spawnIntervalMs;
+      DD.spawnCustomer({});
     }
+
+    // bus timer — fires exactly ONCE per day, at the actual bus stop's position
+    const busPlotIndex = rt.decoInstances.findIndex(d => d && d.typeId === 'busstop');
+    if (busPlotIndex !== -1 && !rt.busUsedToday) {
+      rt.busTimer += dt;
+      const remaining = Math.max(0, Math.ceil(rt.busTriggerTime - rt.busTimer));
+      if (remaining !== rt.lastBusCountdownShown) {
+        rt.lastBusCountdownShown = remaining;
+        DD.updateBusCountdown(busPlotIndex, remaining);
+      }
+      if (rt.busTimer >= rt.busTriggerTime) {
+        rt.busUsedToday = true;
+        DD.updateBusCountdown(busPlotIndex, null);
+        DD.Sound.play('bus');
+        DD.spawnBusEl(DD.runtime.plotX[busPlotIndex]);
+        for (let i = 0; i < DD.BUS_BATCH_SIZE; i++) DD.spawnCustomer({ fromBus: true, startPlotIndex: busPlotIndex });
+      }
+    }
+
+    if (rt.dayTimeRemaining <= 0) {
+      // Time's up for spawning, but let customers currently on the street
+      // finish naturally (walk out of shops, finish queueing, etc.) instead
+      // of vanishing mid-visit. The day only actually ends once the street
+      // is clear or this grace period runs out, whichever comes first.
+      rt.windingDown = true;
+      rt.windDownGraceRemaining = DD.DAY_WINDDOWN_GRACE_S;
+    }
+  } else {
+    rt.windDownGraceRemaining -= dt;
   }
 
-  // update customers
+  // update customers (continues normally during wind-down so they can finish)
   const plots = rt.plotX;
   for (let i = rt.customers.length - 1; i >= 0; i--) {
     const cust = rt.customers[i];
@@ -279,8 +311,11 @@ DD.tick = function (dt) {
 
   DD.renderHUD();
 
-  if (rt.dayTimeRemaining <= 0) {
-    DD.endDay();
+  if (rt.windingDown) {
+    const anyBusy = rt.customers.some(c => DD.BUSY_SERVICE_STATES.indexOf(c.state) !== -1);
+    if (!anyBusy || rt.windDownGraceRemaining <= 0) {
+      DD.endDay();
+    }
   }
 };
 
@@ -291,13 +326,18 @@ DD.endDay = function () {
   const rt = DD.runtime;
   rt.dayActive = false;
 
-  // force-finalize any customers still on the street
+  // force-finalize any customers still on the street (should be rare now that
+  // the day gracefully winds down instead of cutting off abruptly — this is
+  // a safety net for the odd customer still stuck queueing when the grace
+  // period itself runs out)
   rt.customers.forEach(cust => {
     rt.dayCustomersResolved++;
     if (cust.servedAnything) { rt.dayCustomersHappy++; DD.state.stats.customersHappy++; }
+    releaseFromAllQueuesAndSlots(cust);
     DD.removeCustomerEl(cust.id, cust.servedAnything);
   });
   rt.customers = [];
+  rt.windingDown = false;
 
   const cityDef = DD.currentCityDef();
   const citySave = DD.currentCitySave();
@@ -327,6 +367,9 @@ DD.endDay = function () {
   const targetHitNow = !alreadyCompleted && citySave.cumulative >= cityDef.target;
   if (targetHitNow) {
     citySave.completed = true;
+    if (citySave.bestCompletionDay == null || citySave.day < citySave.bestCompletionDay) {
+      citySave.bestCompletionDay = citySave.day;
+    }
     DD.refreshCityUnlocks();
   }
 
@@ -394,6 +437,7 @@ DD.showDayEndModal = function (r) {
 DD.showCityCompleteModal = function (r) {
   let body = '<h2>🎉 Target Reached!</h2>';
   body += '<p class="gate-day">' + r.cityDef.name + ' complete — done in ' + r.dayUsed + ' of ' + r.cityDef.days + ' days.</p>';
+  if (r.citySave.bestCompletionDay === r.dayUsed) body += '<p class="tag-done">🏆 New personal best for this city!</p>';
   body += '<div class="dayend-grid">';
   body += '<div class="stat-card"><span class="stat-val">' + DD.fmtMoney(r.citySave.cumulative) + '</span><span class="stat-label">Total Earned</span></div>';
   body += '<div class="stat-card"><span class="stat-val">' + DD.fmtMoney(r.cityDef.target) + '</span><span class="stat-label">Target</span></div>';
