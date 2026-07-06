@@ -316,18 +316,18 @@ DD.RIGGED_SPRITES = { 1: { hipFraction: 0.656 } }; // trial: customer-1 uses a 3
 
 DD.createCustomerEl = function (cust) {
   const div = document.createElement('div');
-  const rig = DD.RIGGED_SPRITES[cust.spriteIndex];
+  const rig = DD.RIGGED_SPRITES[cust.spriteIndex] && DD.RIG_ASSETS ? DD.RIGGED_SPRITES[cust.spriteIndex] : null;
   div.className = 'customer' + (cust.isVIP ? ' vip' : '') + (rig ? ' rigged' : '');
   div.dataset.id = cust.id;
 
   let spriteHtml;
   if (rig) {
-    const base = 'assets/customers_rig/customer-' + cust.spriteIndex;
+    const assets = DD.RIG_ASSETS || {};
     spriteHtml =
       '<div class="rig-stage" style="--hip-y:' + (rig.hipFraction * 100) + '%">' +
-      '<img class="rig-part rig-legL" src="' + base + '-legL.png" alt="" />' +
-      '<img class="rig-part rig-legR" src="' + base + '-legR.png" alt="" />' +
-      '<img class="rig-part rig-torso" src="' + base + '-torso.png" alt="" />' +
+      '<img class="rig-part rig-legL" src="' + assets.legL + '" alt="" />' +
+      '<img class="rig-part rig-legR" src="' + assets.legR + '" alt="" />' +
+      '<img class="rig-part rig-torso" src="' + assets.torso + '" alt="" />' +
       '</div>';
   } else {
     spriteHtml = '<img class="cust-img" src="assets/customers/customer-' + cust.spriteIndex + '.png" alt="customer" />';
